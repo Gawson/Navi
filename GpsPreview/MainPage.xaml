@@ -1,0 +1,23 @@
+﻿<Page
+    x:Class="GpsPreview.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:GpsPreview"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:Maps="using:Windows.UI.Xaml.Controls.Maps"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid>
+		<Maps:MapControl x:Name="map"></Maps:MapControl>
+		
+		<StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="30" Background="AliceBlue" Opacity="0.8">
+			<TextBlock x:Name="textOutput" Padding="10" Height="300" />
+			<Button x:Name="gpsButton" Click="gpsButton_Click" HorizontalAlignment="Center" Margin="10">GPS</Button>
+			<Button x:Name="updateButton" Click="updateButton_Click" HorizontalAlignment="Center" Margin="10">update</Button>
+			<Button x:Name="sqliteTest" Click="sqliteTest_Click" HorizontalAlignment="Center" Margin="10">SQLite</Button>
+		</StackPanel>
+		
+    </Grid>
+</Page>
