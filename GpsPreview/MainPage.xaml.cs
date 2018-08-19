@@ -15,6 +15,9 @@ using Windows.UI.Xaml.Navigation;
 
 using Windows.Devices.Geolocation;
 using Windows.UI.Core;
+using GpsPreview.Maps;
+using System.Text;
+using Windows.UI.Xaml.Shapes;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -25,14 +28,66 @@ namespace GpsPreview
     /// </summary>
     public sealed partial class MainPage : Page
     {
-
+		MapTilesDatabase db;
 		Geoposition pos;
 		Geolocator geolocator;
 
 		public MainPage()
         {
             this.InitializeComponent();
+
+			this.Loaded += MainPage_Loaded;
         }
+
+		private void MainPage_Loaded(object sender, RoutedEventArgs e)
+		{
+			db = new MapTilesDatabase();
+			db.InitFromResource(MapTilesDatabase.WarsawMapBase);
+
+			map.MapTapped += Map_MapTapped;
+
+			Console.SetOut(new ControlWriter(textOutput));
+		}
+
+		private async void Map_MapTapped(Windows.UI.Xaml.Controls.Maps.MapControl sender, Windows.UI.Xaml.Controls.Maps.MapInputEventArgs args)
+		{
+			var tileAddr = MapUtil.WorldToTilePos(args.Location.Position.Longitude, args.Location.Position.Latitude, 14);
+			System.Diagnostics.Debug.WriteLine($"{tileAddr.X} x {tileAddr.Y}");
+			
+			var reader = await db.GetTile((int)tileAddr.X, (int)tileAddr.Y, 14);
+			if (!reader.HasRows)
+				textOutput.Text = DateTime.Now + ": No data";
+
+			var tile = VectorTile.Parse(reader);
+			textOutput.Text = tile.ToString();
+
+			if (tile.tile_data_raw != null)
+			{
+				PBF pbf = new PBF(tile.tile_data_raw);
+				Tile vtile = ProtoBuf.Serializer.Deserialize<Tile>(new MemoryStream(tile.tile_data_raw));
+
+				vtile.Layers.Where(layer => layer.Name == "water_name").ToList().ForEach(layer =>
+				{
+					layer.Features.First();
+				});
+
+				vectorCanvas.Children.Clear();
+
+				var polygon1 = new Polygon();
+				polygon1.Fill = new SolidColorBrush(Windows.UI.Colors.LightBlue);
+
+				var points = new PointCollection();
+				points.Add(new Windows.Foundation.Point(1000, 200));
+				points.Add(new Windows.Foundation.Point(60, 140));
+				points.Add(new Windows.Foundation.Point(130, 140));
+				points.Add(new Windows.Foundation.Point(180, 200));
+				polygon1.Points = points;
+
+
+				vectorCanvas.Children.Add(polygon1);
+			}
+		}
+
 
 		private async void gpsButton_Click(object sender, RoutedEventArgs e)
 		{
@@ -57,6 +112,7 @@ namespace GpsPreview
 					
 
 					textOutput.Text = "Location updated.";
+					
 					break;
 
 				case GeolocationAccessStatus.Denied:
@@ -147,8 +203,8 @@ namespace GpsPreview
 
 		private async void sqliteTest_Click(object sender, RoutedEventArgs e)
 		{
-			var output = await MapTilesDatabase.InitializeDatabase();
-			textOutput.Text += "\n" + output + "\n";
+			//var output = await MapTilesDatabase.InitializeDatabase();
+			//textOutput.Text += "\n" + output + "\n";
 		}
 	}
 }

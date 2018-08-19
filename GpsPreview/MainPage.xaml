@@ -10,14 +10,25 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Grid>
-		<Maps:MapControl x:Name="map"></Maps:MapControl>
+		<Maps:MapControl x:Name="map" ZoomLevel="11"></Maps:MapControl>
 		
-		<StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="30" Background="AliceBlue" Opacity="0.8">
+		<StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Margin="30" Background="AliceBlue" Opacity="0.8">
 			<TextBlock x:Name="textOutput" Padding="10" Height="300" />
+		</StackPanel>
+
+		<StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Center">
 			<Button x:Name="gpsButton" Click="gpsButton_Click" HorizontalAlignment="Center" Margin="10">GPS</Button>
 			<Button x:Name="updateButton" Click="updateButton_Click" HorizontalAlignment="Center" Margin="10">update</Button>
 			<Button x:Name="sqliteTest" Click="sqliteTest_Click" HorizontalAlignment="Center" Margin="10">SQLite</Button>
 		</StackPanel>
+
 		
-    </Grid>
+			<Viewbox Width="256" Height="256"  HorizontalAlignment="Right" VerticalAlignment="Top">
+			<Border BorderThickness="1" >
+				<Canvas x:Name="vectorCanvas" Background="White" Width="4096" Height="4096"></Canvas>
+			</Border>
+			</Viewbox>
+		
+
+	</Grid>
 </Page>
