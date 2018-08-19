@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2047
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HDMICapture", "HDMICapture\HDMICapture.csproj", "{B99596AA-226D-4E0B-8A40-67054ABB81F0}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GpsPreview", "GpsPreview\GpsPreview.csproj", "{5C0FB184-89CE-4D4B-AC65-CEB11F2DD888}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HDMICapture", "HDMICapture\HDMICapture.csproj", "{B99596AA-226D-4E0B-8A40-67054ABB81F0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,24 +17,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|ARM.ActiveCfg = Debug|ARM
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|ARM.Build.0 = Debug|ARM
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|ARM.Deploy.0 = Debug|ARM
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|x64.ActiveCfg = Debug|x64
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|x64.Build.0 = Debug|x64
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|x64.Deploy.0 = Debug|x64
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|x86.ActiveCfg = Debug|x86
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|x86.Build.0 = Debug|x86
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|x86.Deploy.0 = Debug|x86
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|ARM.ActiveCfg = Release|ARM
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|ARM.Build.0 = Release|ARM
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|ARM.Deploy.0 = Release|ARM
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|x64.ActiveCfg = Release|x64
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|x64.Build.0 = Release|x64
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|x64.Deploy.0 = Release|x64
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|x86.ActiveCfg = Release|x86
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|x86.Build.0 = Release|x86
-		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|x86.Deploy.0 = Release|x86
 		{5C0FB184-89CE-4D4B-AC65-CEB11F2DD888}.Debug|ARM.ActiveCfg = Debug|ARM
 		{5C0FB184-89CE-4D4B-AC65-CEB11F2DD888}.Debug|ARM.Build.0 = Debug|ARM
 		{5C0FB184-89CE-4D4B-AC65-CEB11F2DD888}.Debug|ARM.Deploy.0 = Debug|ARM
@@ -53,6 +35,24 @@ Global
 		{5C0FB184-89CE-4D4B-AC65-CEB11F2DD888}.Release|x86.ActiveCfg = Release|x86
 		{5C0FB184-89CE-4D4B-AC65-CEB11F2DD888}.Release|x86.Build.0 = Release|x86
 		{5C0FB184-89CE-4D4B-AC65-CEB11F2DD888}.Release|x86.Deploy.0 = Release|x86
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|ARM.ActiveCfg = Debug|ARM
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|ARM.Build.0 = Debug|ARM
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|ARM.Deploy.0 = Debug|ARM
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|x64.ActiveCfg = Debug|x64
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|x64.Build.0 = Debug|x64
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|x64.Deploy.0 = Debug|x64
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|x86.ActiveCfg = Debug|x86
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|x86.Build.0 = Debug|x86
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Debug|x86.Deploy.0 = Debug|x86
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|ARM.ActiveCfg = Release|ARM
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|ARM.Build.0 = Release|ARM
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|ARM.Deploy.0 = Release|ARM
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|x64.ActiveCfg = Release|x64
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|x64.Build.0 = Release|x64
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|x64.Deploy.0 = Release|x64
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|x86.ActiveCfg = Release|x86
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|x86.Build.0 = Release|x86
+		{B99596AA-226D-4E0B-8A40-67054ABB81F0}.Release|x86.Deploy.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
