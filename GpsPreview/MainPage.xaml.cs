@@ -18,6 +18,8 @@ using Windows.UI.Core;
 using GpsPreview.Maps;
 using System.Text;
 using Windows.UI.Xaml.Shapes;
+using Microsoft.Graphics.Canvas.UI.Xaml;
+using Microsoft.Graphics.Canvas;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -32,6 +34,9 @@ namespace GpsPreview
 		Geoposition pos;
 		Geolocator geolocator;
 
+		Tile currentTile = null;
+		
+
 		public MainPage()
         {
             this.InitializeComponent();
@@ -45,47 +50,164 @@ namespace GpsPreview
 			db.InitFromResource(MapTilesDatabase.WarsawMapBase);
 
 			map.MapTapped += Map_MapTapped;
+			map.Center = new Geopoint(new BasicGeoposition() { Longitude = 21.006114275336859, Latitude = 52.231777083350494, Altitude = 163.6815999513492 });
+			map.ZoomLevel = 16;
 
 			Console.SetOut(new ControlWriter(textOutput));
 		}
 
 		private async void Map_MapTapped(Windows.UI.Xaml.Controls.Maps.MapControl sender, Windows.UI.Xaml.Controls.Maps.MapInputEventArgs args)
 		{
-			var tileAddr = MapUtil.WorldToTilePos(args.Location.Position.Longitude, args.Location.Position.Latitude, 14);
+			int zoomLevel = Math.Min(14, Math.Max(1, (int)sender.ZoomLevel));
+			var tileAddr = MapUtil.WorldToTilePos(args.Location.Position.Longitude, args.Location.Position.Latitude, zoomLevel);
 			System.Diagnostics.Debug.WriteLine($"{tileAddr.X} x {tileAddr.Y}");
-			
-			var reader = await db.GetTile((int)tileAddr.X, (int)tileAddr.Y, 14);
-			if (!reader.HasRows)
-				textOutput.Text = DateTime.Now + ": No data";
-
-			var tile = VectorTile.Parse(reader);
-			textOutput.Text = tile.ToString();
-
-			if (tile.tile_data_raw != null)
+			System.Diagnostics.Debug.WriteLine($"zoom: {zoomLevel}");
 			{
-				PBF pbf = new PBF(tile.tile_data_raw);
-				Tile vtile = ProtoBuf.Serializer.Deserialize<Tile>(new MemoryStream(tile.tile_data_raw));
-
-				vtile.Layers.Where(layer => layer.Name == "water_name").ToList().ForEach(layer =>
+				var reader = await db.GetTile((int)tileAddr.X, (int)tileAddr.Y, zoomLevel);
+				if (!reader.HasRows)
+					textOutput.Text = DateTime.Now + ": No data";
+				var tile = VectorTile.Parse(reader);
+				if (tile.tile_data_raw != null)
 				{
-					layer.Features.First();
-				});
+					PBF pbf = new PBF(tile.tile_data_raw);
+					currentTile = ProtoBuf.Serializer.Deserialize<Tile>(new MemoryStream(tile.tile_data_raw));
 
-				vectorCanvas.Children.Clear();
+					
+					if (GeometryDecoder.offscreen == null)
+					{
+						CanvasDevice device = CanvasDevice.GetSharedDevice();
+						GeometryDecoder.offscreen = new CanvasRenderTarget(device, 512, 512, Windows.Graphics.Display.DisplayInformation.GetForCurrentView().LogicalDpi);						
+					}
+					
 
-				var polygon1 = new Polygon();
-				polygon1.Fill = new SolidColorBrush(Windows.UI.Colors.LightBlue);
+					//Performance benchmark
+					var layer_buildings = currentTile.Layers.Where(l => l.Name == "building").ToList().First();
+					var layer_landcover = currentTile.Layers.Where(l => l.Name == "landcover").ToList().First();
 
-				var points = new PointCollection();
-				points.Add(new Windows.Foundation.Point(1000, 200));
-				points.Add(new Windows.Foundation.Point(60, 140));
-				points.Add(new Windows.Foundation.Point(130, 140));
-				points.Add(new Windows.Foundation.Point(180, 200));
-				polygon1.Points = points;
+					
 
+					System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+					stopwatch.Start();
 
-				vectorCanvas.Children.Add(polygon1);
+					Dictionary<string, Windows.UI.Color> landColors = new Dictionary<string, Windows.UI.Color>();
+					landColors.Add("grass", Windows.UI.Colors.LawnGreen);
+					landColors.Add("meadow", Windows.UI.Colors.Green);
+					landColors.Add("wood", Windows.UI.Colors.ForestGreen);
+					landColors.Add("forest", Windows.UI.Colors.DarkGreen);
+					landColors.Add("park", Windows.UI.Colors.LightGreen);
+					landColors.Add("village_green", Windows.UI.Colors.GreenYellow);
+					landColors.Add("wetland", Windows.UI.Colors.CornflowerBlue);
+					landColors.Add("recreation_ground", Windows.UI.Colors.LightYellow);
+					landColors.Add("allotments", Windows.UI.Colors.Red);
+					
+
+					using (CanvasDrawingSession ds = GeometryDecoder.offscreen.CreateDrawingSession())
+					{
+						ds.Antialiasing = CanvasAntialiasing.Antialiased;
+						ds.Clear(Windows.UI.Colors.White);
+						for (int it = 0; it < 1; it++)
+						{							
+							layer_landcover.Features.ForEach(f => {
+								var tags = GeometryDecoder.GetTags(f, layer_landcover);															   
+								GeometryDecoder.TestPerformance(f, 512f / 4096f, landColors[tags["subclass"]], landColors[tags["subclass"]], ds);
+							});
+
+							layer_buildings.Features.ForEach(f =>
+							{
+								var tags = GeometryDecoder.GetTags(f, layer_buildings);
+								GeometryDecoder.TestPerformance(f, 512f / 4096f, Windows.UI.Colors.SandyBrown, Windows.UI.Colors.Brown, ds);
+							});
+						}
+					}
+
+					stopwatch.Stop();
+					
+
+					System.Diagnostics.Debug.WriteLine($"TIME: {stopwatch.ElapsedMilliseconds} ms");
+					textOutput.Text = $"TIME: {stopwatch.ElapsedMilliseconds} ms";
+				}
+				else
+				{
+					currentTile = null;
+				}
+
 			}
+
+			win2dCanvas.Invalidate();
+			
+			////CENTER Tile
+			//{
+			//	var reader = await db.GetTile((int)tileAddr.X, (int)tileAddr.Y, zoomLevel);
+			//	if (!reader.HasRows)
+			//		textOutput.Text = DateTime.Now + ": No data";
+
+			//	var tile = VectorTile.Parse(reader);
+			//	textOutput.Text = tile.ToString();
+
+			//	if (tile.tile_data_raw != null)
+			//	{
+			//		PBF pbf = new PBF(tile.tile_data_raw);
+			//		Tile vtile = ProtoBuf.Serializer.Deserialize<Tile>(new MemoryStream(tile.tile_data_raw));
+
+			//		vectorCanvas.Children.Clear();
+
+			//		vtile.Layers.Where(layer => layer.Name == "building").ToList().ForEach(layer =>
+			//		{
+			//			layer.Features.ForEach(f =>
+			//			{
+			//				var path = GeometryDecoder.DecodeGeometry(f, 512f / 4096f);
+			//				vectorCanvas.Children.Add(path);
+			//			});
+
+			//		});
+			//	}
+			//}
+
+			////LEFT Tile
+			//	{
+			//	var reader = await db.GetTile((int)tileAddr.X - 1, (int)tileAddr.Y, zoomLevel);
+			//	var tile = VectorTile.Parse(reader);
+			//	if (tile.tile_data_raw != null)
+			//	{
+			//		PBF pbf = new PBF(tile.tile_data_raw);
+			//		Tile vtile = ProtoBuf.Serializer.Deserialize<Tile>(new MemoryStream(tile.tile_data_raw));
+
+			//		vectorCanvasLeft.Children.Clear();
+
+			//		vtile.Layers.Where(layer => layer.Name == "building").ToList().ForEach(layer =>
+			//		{
+			//			layer.Features.ForEach(f =>
+			//			{
+			//				var path = GeometryDecoder.DecodeGeometry(f, 512f / 4096f);
+			//				vectorCanvasLeft.Children.Add(path);
+			//			});
+
+			//		});
+			//	}
+			//}
+
+			////RIGHT Tile
+			//	{
+			//	var reader = await db.GetTile((int)tileAddr.X + 1, (int)tileAddr.Y, zoomLevel);
+			//	var tile = VectorTile.Parse(reader);
+			//	if (tile.tile_data_raw != null)
+			//	{
+			//		PBF pbf = new PBF(tile.tile_data_raw);
+			//		Tile vtile = ProtoBuf.Serializer.Deserialize<Tile>(new MemoryStream(tile.tile_data_raw));
+
+			//		vectorCanvasRight.Children.Clear();
+
+			//		vtile.Layers.Where(layer => layer.Name == "building").ToList().ForEach(layer =>
+			//		{
+			//			layer.Features.ForEach(f =>
+			//			{
+			//				var path = GeometryDecoder.DecodeGeometry(f, 512f / 4096f);
+			//				vectorCanvasRight.Children.Add(path);
+			//			});
+
+			//		});
+			//	}
+			//}
 		}
 
 
@@ -205,6 +327,19 @@ namespace GpsPreview
 		{
 			//var output = await MapTilesDatabase.InitializeDatabase();
 			//textOutput.Text += "\n" + output + "\n";
+		}
+
+		private void CanvasControl_Draw(CanvasControl sender, CanvasDrawEventArgs args)
+		{
+
+			if(currentTile==null)
+			{
+				args.DrawingSession.Clear(Windows.UI.Colors.CornflowerBlue);
+			} else
+			{
+				if (GeometryDecoder.offscreen != null)
+					args.DrawingSession.DrawImage(GeometryDecoder.offscreen);
+			}
 		}
 	}
 }

@@ -99,6 +99,7 @@
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Maps\GeometryDecoder.cs" />
     <Compile Include="Maps\MapUtil.cs" />
     <Compile Include="Maps\VectorTileProto.cs" />
     <Compile Include="Maps\VectorTiles.cs" />
@@ -143,6 +144,9 @@
     </PackageReference>
     <PackageReference Include="protobuf-net">
       <Version>2.3.17</Version>
+    </PackageReference>
+    <PackageReference Include="Win2D.uwp">
+      <Version>1.23.0</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup />
