@@ -24,7 +24,7 @@
 		</StackPanel>
 
 		<StackPanel Orientation="Horizontal">
-			<canvas:CanvasControl x:Name="win2dCanvas" Draw="CanvasControl_Draw" ClearColor="White" Width="512" Height="512" HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.7"/>
+			<canvas:CanvasControl x:Name="win2dCanvas" Draw="CanvasControl_Draw" ClearColor="White" Width="1024" Height="1024" HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.85"/>
 
 			<!--<Viewbox Width="512" Height="512"  HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.7">
 				<Canvas x:Name="vectorCanvasLeft" Background="White" Width="512" Height="512">

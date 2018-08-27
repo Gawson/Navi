@@ -47,7 +47,7 @@ namespace GpsPreview
 		private void MainPage_Loaded(object sender, RoutedEventArgs e)
 		{
 			db = new MapTilesDatabase();
-			db.InitFromResource(MapTilesDatabase.WarsawMapBase);
+			db.InitFromResource(MapTilesDatabase.PolandMapBase);
 
 			map.MapTapped += Map_MapTapped;
 			map.Center = new Geopoint(new BasicGeoposition() { Longitude = 21.006114275336859, Latitude = 52.231777083350494, Altitude = 163.6815999513492 });
@@ -58,6 +58,9 @@ namespace GpsPreview
 
 		private async void Map_MapTapped(Windows.UI.Xaml.Controls.Maps.MapControl sender, Windows.UI.Xaml.Controls.Maps.MapInputEventArgs args)
 		{
+			float canvasSize = 1024f;
+			float lineScale = 2f;
+
 			int zoomLevel = Math.Min(14, Math.Max(1, (int)sender.ZoomLevel));
 			var tileAddr = MapUtil.WorldToTilePos(args.Location.Position.Longitude, args.Location.Position.Latitude, zoomLevel);
 			System.Diagnostics.Debug.WriteLine($"{tileAddr.X} x {tileAddr.Y}");
@@ -76,15 +79,24 @@ namespace GpsPreview
 					if (GeometryDecoder.offscreen == null)
 					{
 						CanvasDevice device = CanvasDevice.GetSharedDevice();
-						GeometryDecoder.offscreen = new CanvasRenderTarget(device, 512, 512, Windows.Graphics.Display.DisplayInformation.GetForCurrentView().LogicalDpi);						
+						GeometryDecoder.offscreen = new CanvasRenderTarget(device, canvasSize, canvasSize, Windows.Graphics.Display.DisplayInformation.GetForCurrentView().LogicalDpi);						
 					}
-					
+
 
 					//Performance benchmark
-					var layer_buildings = currentTile.Layers.Where(l => l.Name == "building").ToList().First();
-					var layer_landcover = currentTile.Layers.Where(l => l.Name == "landcover").ToList().First();
+					Tile.Layer layer_buildings = null;
+					Tile.Layer layer_landcover = null;
+					Tile.Layer layer_transportation = null;
+					Tile.Layer layer_transportation_name = null;
 
-					
+					if (currentTile.Layers.Any(l => l.Name == "building"))
+						layer_buildings = currentTile.Layers.Where(l => l.Name == "building").ToList()?.First();
+					if (currentTile.Layers.Any(l => l.Name == "landcover"))
+						layer_landcover = currentTile.Layers.Where(l => l.Name == "landcover").ToList()?.First();
+					if (currentTile.Layers.Any(l => l.Name == "transportation"))
+						layer_transportation = currentTile.Layers.Where(l => l.Name == "transportation").ToList()?.First();
+					if (currentTile.Layers.Any(l => l.Name == "transportation_name"))
+						layer_transportation_name = currentTile.Layers.Where(l => l.Name == "transportation_name").ToList()?.First();
 
 					System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
 					stopwatch.Start();
@@ -107,16 +119,54 @@ namespace GpsPreview
 						ds.Clear(Windows.UI.Colors.White);
 						for (int it = 0; it < 1; it++)
 						{							
-							layer_landcover.Features.ForEach(f => {
-								var tags = GeometryDecoder.GetTags(f, layer_landcover);															   
-								GeometryDecoder.TestPerformance(f, 512f / 4096f, landColors[tags["subclass"]], landColors[tags["subclass"]], ds);
+							layer_landcover?.Features.ForEach(f => {
+								var tags = GeometryDecoder.GetTags(f, layer_landcover);
+								var color = landColors.ContainsKey(tags["subclass"]) ? landColors[tags["subclass"]] : Windows.UI.Colors.LightGreen;
+								GeometryDecoder.DrawGeometry(f, canvasSize / 4096f, ds, color, color);
 							});
 
-							layer_buildings.Features.ForEach(f =>
+							layer_buildings?.Features.ForEach(f =>
 							{
 								var tags = GeometryDecoder.GetTags(f, layer_buildings);
-								GeometryDecoder.TestPerformance(f, 512f / 4096f, Windows.UI.Colors.SandyBrown, Windows.UI.Colors.Brown, ds);
+								GeometryDecoder.DrawGeometry(f, canvasSize / 4096f, ds, Windows.UI.Colors.SandyBrown, Windows.UI.Colors.Brown);
 							});
+
+
+
+							var names = layer_transportation?.Features.ConvertAll<string>(f =>
+							{
+								var tags = GeometryDecoder.GetTags(f, layer_transportation);
+								return tags["class"];
+							}).ToList().Distinct().ToList();
+
+							layer_transportation?.Features.ForEach(f =>
+							{
+								var tags = GeometryDecoder.GetTags(f, layer_transportation);
+								if (tags["class"] == "transit")
+									GeometryDecoder.DrawGeometry(f, canvasSize / 4096f, ds, Windows.UI.Colors.Blue, Windows.UI.Colors.BlueViolet,4*lineScale,5 * lineScale);
+								else if (tags["class"] == "primary")
+									GeometryDecoder.DrawGeometry(f, canvasSize / 4096f, ds, Windows.UI.Colors.Black, Windows.UI.Colors.Black,3 * lineScale, 4 * lineScale);
+								else if (tags["class"] == "secondary")
+									GeometryDecoder.DrawGeometry(f, canvasSize / 4096f, ds, Windows.UI.Colors.Cyan, Windows.UI.Colors.DarkCyan,2 * lineScale, 3 * lineScale);
+								else if (tags["class"] == "tertiary")
+									GeometryDecoder.DrawGeometry(f, canvasSize / 4096f, ds, Windows.UI.Colors.Red, Windows.UI.Colors.DarkRed,1 * lineScale, 1.5f * lineScale);
+								else if (tags["class"] == "minor")
+									GeometryDecoder.DrawGeometry(f, canvasSize / 4096f, ds, Windows.UI.Colors.Orange, Windows.UI.Colors.DarkOrange,1 * lineScale, 1 * lineScale);
+
+								else if (tags["class"] == "service")
+									GeometryDecoder.DrawGeometry(f, canvasSize / 4096f, ds, Windows.UI.Colors.Green, Windows.UI.Colors.DarkGreen,1 * lineScale, 1 * lineScale);
+
+								else if (tags["class"] == "track")
+									GeometryDecoder.DrawGeometry(f, canvasSize / 4096f, ds, Windows.UI.Colors.Gray, Windows.UI.Colors.DarkGray,1 * lineScale, 1 * lineScale);
+								else if (tags["class"] == "path")
+									GeometryDecoder.DrawGeometry(f, canvasSize / 4096f, ds, Windows.UI.Colors.Pink, Windows.UI.Colors.DeepPink,1 * lineScale, 1 * lineScale);
+							});
+
+							//layer_transportation_name?.Features.ForEach(f =>
+							//{
+							//	var tags = GeometryDecoder.GetTags(f, layer_transportation_name);
+							//	GeometryDecoder.TestPerformance(f, 512f / 4096f, Windows.UI.Colors.Cyan, Windows.UI.Colors.Cyan, ds);
+							//});
 						}
 					}
 

@@ -17,6 +17,7 @@ namespace GpsPreview
 	public class MapTilesDatabase
 	{
 		public static string WarsawMapBase = "Maps//2017-07-03_poland_warsaw.mbtiles";
+		public static string PolandMapBase = "Maps//2017-07-03_europe_poland.mbtiles";
 
 		string mapDbFile;
 		SqliteConnection db;		

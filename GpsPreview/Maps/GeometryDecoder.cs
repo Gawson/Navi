@@ -20,7 +20,7 @@ namespace GpsPreview.Maps
 		public static Dictionary<string, string> GetTags(Tile.Feature feature, Tile.Layer layer)
 		{
 			Dictionary<string, string> tags = new Dictionary<string, string>();
-
+			if (feature.Tags == null) return tags;
 			Queue<uint> q = new Queue<uint>(feature.Tags);
 			while(q.Count>0)
 			{
@@ -118,14 +118,13 @@ namespace GpsPreview.Maps
 			DrawGeometry(feature, scale, ds, fillColor, strokeColor);
 		}
 
-		public static void DrawGeometry(Tile.Feature feature, float scale, CanvasDrawingSession session, Windows.UI.Color fillColor, Windows.UI.Color strokeColor)
+		public static void DrawGeometry(Tile.Feature feature, float scale, CanvasDrawingSession session, Windows.UI.Color fillColor, Windows.UI.Color strokeColor, float innerLineWidth = 1f, float outerLineWidth = 2f)
 		{
 			Queue<uint> q = new Queue<uint>(feature.Geometries);
 			float cx = 0;
 			float cy = 0;
 
 			List<System.Numerics.Vector2> poly = new List<System.Numerics.Vector2>();
-			
 
 			while (q.Count > 0)
 			{
@@ -146,12 +145,24 @@ namespace GpsPreview.Maps
 						}
 						break;
 					case GeometryCommand.ClosePath:
-						CanvasGeometry geom = CanvasGeometry.CreatePolygon(session.Device, poly.ToArray());
-						session.FillGeometry(geom, fillColor);
-						session.DrawGeometry(geom, strokeColor);
+						if (feature.Type == Tile.GeomType.Polygon)
+						{
+							CanvasGeometry geom = CanvasGeometry.CreatePolygon(session.Device, poly.ToArray());
+							session.FillGeometry(geom, fillColor);
+							session.DrawGeometry(geom, strokeColor);
+						}
 						poly.Clear();
 						break;
 				}
+			}
+			if (feature.Type == Tile.GeomType.Linestring)
+			{
+				for (int it = 0; it < (poly.Count - 1); it++)
+				{
+					session.DrawLine(poly[it], poly[it + 1], strokeColor, outerLineWidth);
+					session.DrawLine(poly[it], poly[it + 1], fillColor, innerLineWidth);
+				}
+				poly.Clear();
 			}
 		}
 	}
