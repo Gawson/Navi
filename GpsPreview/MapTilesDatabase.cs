@@ -18,6 +18,7 @@ namespace GpsPreview
 	{
 		public static string WarsawMapBase = "Maps//2017-07-03_poland_warsaw.mbtiles";
 		public static string PolandMapBase = "Maps//2017-07-03_europe_poland.mbtiles";
+		public static string TestMapBase = "Maps//tiles.mbtiles";
 
 		string mapDbFile;
 		SqliteConnection db;		
@@ -54,6 +55,7 @@ namespace GpsPreview
 		public async Task<SqliteDataReader> GetTile(int tile_x, int tile_y, int zoom)
 		{
 			return await RunCommand($"SELECT * FROM package_tiles WHERE tile_column = {tile_x} and tile_row = {tile_y}");
+			//return await RunCommand($"SELECT * FROM tiles WHERE tile_column = {tile_x} and tile_row = {tile_y}");
 		}
 
 	}
