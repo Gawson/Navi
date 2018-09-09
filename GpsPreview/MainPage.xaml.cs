@@ -22,6 +22,8 @@ using Microsoft.Graphics.Canvas.UI.Xaml;
 using Microsoft.Graphics.Canvas;
 using Windows.UI;
 using Windows.Storage;
+using Microsoft.Graphics.Canvas.Svg;
+using Itinero;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -46,6 +48,7 @@ namespace GpsPreview
 		private System.Numerics.Vector2 canvasScalePoint = new System.Numerics.Vector2(0, 0);
 		private Windows.UI.Input.PointerPoint lastPoint = null;
 
+		Dictionary<string, CanvasSvgDocument> icons;
 
 		public MainPage()
         {
@@ -54,15 +57,38 @@ namespace GpsPreview
 			this.Loaded += MainPage_Loaded;
         }
 
-		private void MainPage_Loaded(object sender, RoutedEventArgs e)
+		RouterDb routerDb;
+		Router router;
+		bool setStartPending = false;
+		bool setEndPending = false;
+		BasicGeoposition startPosition;
+		BasicGeoposition endPosition;
+		Windows.UI.Xaml.Controls.Maps.MapIcon startIcon;
+		Windows.UI.Xaml.Controls.Maps.MapIcon endIcon;
+
+		private async void InitMapRouter()
+		{
+			//=================================================
+			Windows.Storage.StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
+			Windows.Storage.StorageFile routerFile = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Maps//poland.routerdb"));
+			routerDb = Itinero.RouterDb.Deserialize(new FileInfo(routerFile.Path).OpenRead(), Itinero.RouterDbProfile.MobileHighEnd);
+			router = new Itinero.Router(routerDb);
+			
+			//=================================================
+		}
+
+		private async void MainPage_Loaded(object sender, RoutedEventArgs e)
 		{
 			db = new MapTilesDatabase();
-			db.InitFromResource(MapTilesDatabase.TestMapBase);
+			db.InitFromResource(MapTilesDatabase.PolandCustomMapBase);
 
 			//MAP 
 			map.MapTapped += Map_MapTapped;
 			map.Center = new Geopoint(new BasicGeoposition() { Longitude = 21.006114275336859, Latitude = 52.231777083350494, Altitude = 163.6815999513492 });
 			map.ZoomLevel = 16;
+
+			InitMapRouter();
+
 
 			Console.SetOut(new ControlWriter(textOutput));
 
@@ -107,12 +133,51 @@ namespace GpsPreview
 			};
 
 			win2dCanvas.DpiScale = 1;
+
+			icons = new Dictionary<string, CanvasSvgDocument>();
+			StorageFolder appInstalledFolder = Windows.ApplicationModel.Package.Current.InstalledLocation;
+			StorageFolder assets = await appInstalledFolder.GetFolderAsync("Icons");
+			var files = await assets.GetFilesAsync();
+			foreach (var f in files) {
+				var shortName = System.IO.Path.GetFileNameWithoutExtension(f.Name).Split(".").Last();
+				using (var stream = await f.OpenAsync(FileAccessMode.Read)) {
+					CanvasSvgDocument svg = await CanvasSvgDocument.LoadAsync(win2dCanvas, stream);
+					icons.Add(shortName, svg);
+				}
+			}
+			;
 		}
+
+		
 
 		private async void Map_MapTapped(Windows.UI.Xaml.Controls.Maps.MapControl sender, Windows.UI.Xaml.Controls.Maps.MapInputEventArgs args)
 		{
+			if(setStartPending)
+			{
+				// get position
+				Geopoint myPoint = new Geopoint(new BasicGeoposition() { Latitude = args.Location.Position.Latitude, Longitude = args.Location.Position.Longitude });
+				//create POI
+				startIcon = new Windows.UI.Xaml.Controls.Maps.MapIcon { Location = myPoint, NormalizedAnchorPoint = new Point(0.5, 1.0), Title = "Start", ZIndex = 0 };
+				map.MapElements.Add(startIcon);
+				setStartPending = false;
+				return;
+			}
+
+			if(setEndPending)
+			{
+				// get position
+				Geopoint myPoint = new Geopoint(new BasicGeoposition() { Latitude = args.Location.Position.Latitude, Longitude = args.Location.Position.Longitude });
+				//create POI
+				endIcon = new Windows.UI.Xaml.Controls.Maps.MapIcon { Location = myPoint, NormalizedAnchorPoint = new Point(0.5, 1.0), Title = "End", ZIndex = 0 };
+				map.MapElements.Add(endIcon);
+				setEndPending = false;
+				return;
+			}
+
+
 			int zoomLevel = Math.Min(14, Math.Max(1, (int)sender.ZoomLevel));
 			var tileAddr = MapUtil.WorldToTilePos(args.Location.Position.Longitude, args.Location.Position.Latitude, zoomLevel);
+			System.Diagnostics.Debug.WriteLine($"{args.Location.Position.Latitude}, {args.Location.Position.Longitude}");
 			Map_MapTapped((int)tileAddr.X, (int)tileAddr.Y, zoomLevel);
 		}
 
@@ -154,6 +219,7 @@ namespace GpsPreview
 						Tile.Layer layer_transportation = null;
 						Tile.Layer layer_transportation_name = null;
 						Tile.Layer layer_housenumber = null;
+						Tile.Layer layer_poi = null;
 
 						if (currentTile.Layers.Any(l => l.Name == "building"))
 							layer_buildings = currentTile.Layers.Where(l => l.Name == "building").ToList()?.First();
@@ -165,6 +231,8 @@ namespace GpsPreview
 							layer_transportation_name = currentTile.Layers.Where(l => l.Name == "transportation_name").ToList()?.First();
 						if (currentTile.Layers.Any(l => l.Name == "housenumber"))
 							layer_housenumber = currentTile.Layers.Where(l => l.Name == "housenumber").ToList()?.First();
+						if (currentTile.Layers.Any(l => l.Name == "poi"))
+							layer_poi = currentTile.Layers.Where(l => l.Name == "poi").ToList()?.First();
 
 						System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
 						stopwatch.Start();
@@ -203,7 +271,6 @@ namespace GpsPreview
 						using (CanvasActiveLayer activeLayer = ds.CreateLayer(1, new Rect(0, 0, canvasSize, canvasSize)))
 						using (CanvasActiveLayer activeTextLayer = textDs.CreateLayer(1, new Rect(0, 0, canvasSize, canvasSize)))
 						{
-
 
 							ds.Antialiasing = CanvasAntialiasing.Antialiased;
 							ds.Clear(Windows.UI.Colors.Snow);
@@ -355,7 +422,20 @@ namespace GpsPreview
 								{
 									var tags = GeometryDecoder.GetTags(f, layer_housenumber);
 									string text = tags["housenumber"].StringValue;
-									GeometryDecoder.DrawHousenumber(f, canvasSize / 4096f, textDs, Colors.Black, Colors.DarkGray, 1, 1.2f, text);
+									//GeometryDecoder.DrawHousenumber(f, canvasSize / 4096f, textDs, Colors.Black, Colors.White, 1, 1.2f, text);
+									GeometryDecoder.DrawText(f, canvasSize / 4096f, textDs, Colors.Black, Colors.White, 1, 1.2f, text, 2f);
+								});
+
+								layer_poi?.Features.ForEach(f => {
+									var tags = GeometryDecoder.GetTags(f, layer_poi);
+									if(tags.ContainsKey("subclass"))
+									{
+										string subclass = tags["subclass"].StringValue;
+										if(icons.ContainsKey(subclass+"_11"))
+										{
+											GeometryDecoder.DrawIcon(f, canvasSize / 4096f, ds, icons[subclass + "_11"], Colors.Black, Colors.DarkGray);
+										}
+									}
 								});
 
 
@@ -365,7 +445,7 @@ namespace GpsPreview
 									if (tags.ContainsKey("name"))
 									{
 										string text = tags["name"].StringValue;
-										GeometryDecoder.DrawStreetNames(f, canvasSize / 4096f, textDs, Colors.Black, Colors.DarkGray, 1, 1.2f, text);
+										GeometryDecoder.DrawText(f, canvasSize / 4096f, textDs, Colors.Black, Colors.White, 1, 1.2f, text, 3f);
 									}
 								});
 							}
@@ -560,9 +640,69 @@ namespace GpsPreview
 		}
 
 		private void loadTile_Click(object sender, RoutedEventArgs e)
+		{			
+			var tileAddr = MapUtil.WorldToTilePos(21.006079, 52.231748, (int)zoomLevelSlider.Value);
+			Map_MapTapped((int)tileAddr.X, (int)tileAddr.Y, (int)zoomLevelSlider.Value);
+		}
+
+		private void clearRouter_Click(object sender, RoutedEventArgs e)
 		{
-			var tileAddr = MapUtil.WorldToTilePos(21.006079, 52.231748, 14);
-			Map_MapTapped((int)tileAddr.X, (int)tileAddr.Y, 14);
+			map.MapElements.Clear();
+		}
+
+		private void setStartPoint_Click(object sender, RoutedEventArgs e)
+		{
+			setStartPending = true;
+		}
+
+		private void setEndPoint_Click(object sender, RoutedEventArgs e)
+		{
+			setEndPending = true;
+		}
+
+		private void searchRoute_Click(object sender, RoutedEventArgs e)
+		{
+			
+
+
+			if (startIcon == null || endIcon == null) return;
+
+			var cycleWays = routerDb.HasContractedFor(Itinero.Osm.Vehicles.Vehicle.Bicycle.Fastest());
+			var cycleProfiles = new List<Itinero.Profiles.Profile>(Itinero.Osm.Vehicles.Vehicle.Bicycle.GetProfiles());
+			var profile = cycleProfiles[0];
+			var edgeFunc = new Func<Itinero.Data.Network.RoutingEdge, bool>((edge) => {
+				Console.WriteLine(edge.ToString() + " " + edge.Data.Distance);
+				if (edge.Data.Distance > 40) return true;
+				return false;
+			});
+			//var start = router.Resolve(new Itinero.Profiles.Profile[] { profile }, (float)startIcon.Location.Position.Latitude, (float)startIcon.Location.Position.Longitude, edgeFunc);
+			var start = router.Resolve(profile, (float)startIcon.Location.Position.Latitude, (float)startIcon.Location.Position.Longitude,100);
+			var end = router.Resolve(profile, (float)endIcon.Location.Position.Latitude, (float)endIcon.Location.Position.Longitude,100);
+			try
+			{
+				var route = router.Calculate(profile, start, end);
+				var routeGeoJson = route.ToGeoJson();
+				//Console.WriteLine(routeGeoJson);
+				Console.WriteLine($"Time: {route.TotalTime / 60f}");
+
+				foreach (var c in route.Shape)
+				{
+					Console.WriteLine($"new BasicGeoposition() {{ Latitude = {c.Latitude}f, Longitude = {c.Longitude}f }},");
+				}
+
+
+				var mPoly = new Windows.UI.Xaml.Controls.Maps.MapPolyline();
+				var positions = route.Shape.ToList().ConvertAll<BasicGeoposition>(s => new BasicGeoposition() { Latitude = s.Latitude, Longitude = s.Longitude });
+				mPoly.Path = new Geopath(positions);
+				map.MapElements.Clear();
+				map.MapElements.Add(startIcon);
+				map.MapElements.Add(endIcon);
+				map.MapElements.Add(mPoly);
+			}
+			catch (Exception)
+			{
+				Console.WriteLine("No route found");
+			}
 		}
 	}
 }

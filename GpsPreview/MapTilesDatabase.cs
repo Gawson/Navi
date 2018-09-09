@@ -16,9 +16,11 @@ namespace GpsPreview
 
 	public class MapTilesDatabase
 	{
-		public static string WarsawMapBase = "Maps//2017-07-03_poland_warsaw.mbtiles";
-		public static string PolandMapBase = "Maps//2017-07-03_europe_poland.mbtiles";
-		public static string TestMapBase = "Maps//tiles.mbtiles";
+		//public static string WarsawMapBase = "Maps//2017-07-03_poland_warsaw.mbtiles";
+		//public static string PolandMapBase = "Maps//2017-07-03_europe_poland.mbtiles";
+		//public static string MazowieckieMapBase = "Maps//tiles1.mbtiles";
+		//public static string WarsawDetailedMapBase = "Maps//2018-09-03-warszawa.mbtiles";
+		public static string PolandCustomMapBase = "Maps//2018-09-08_poland.mbtiles";
 
 		string mapDbFile;
 		SqliteConnection db;		

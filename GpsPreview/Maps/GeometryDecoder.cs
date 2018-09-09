@@ -1,6 +1,7 @@
 ﻿using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.Effects;
 using Microsoft.Graphics.Canvas.Geometry;
+using Microsoft.Graphics.Canvas.Svg;
 using Microsoft.Graphics.Canvas.Text;
 using System;
 using System.Collections.Generic;
@@ -237,67 +238,48 @@ namespace GpsPreview.Maps
 			}
 		}
 
-		public static void DrawHousenumber(Tile.Feature feature, float scale, CanvasDrawingSession session, Windows.UI.Color fillColor, Windows.UI.Color strokeColor, float innerLineWidth = 1f, float outerLineWidth = 2f, string text= "")
-		{
-			Queue<uint> q = new Queue<uint>(feature.Geometries);
-			float cx = 0;
-			float cy = 0;
-			if(feature.Type == Tile.GeomType.Point)
-			{
-				var cmd = DecodeCommand(q.Dequeue());
-				cx += DecodeParameter(q.Dequeue()) * scale;
-				cy += DecodeParameter(q.Dequeue()) * scale;
-
-				Microsoft.Graphics.Canvas.Text.CanvasTextFormat textFormat = new Microsoft.Graphics.Canvas.Text.CanvasTextFormat()
-				{
-					FontSize = 5,
-					FontWeight = Windows.UI.Text.FontWeights.Bold,
-					HorizontalAlignment = Microsoft.Graphics.Canvas.Text.CanvasHorizontalAlignment.Center,
-					VerticalAlignment = Microsoft.Graphics.Canvas.Text.CanvasVerticalAlignment.Center
-				};
-				//var textLayout = new Microsoft.Graphics.Canvas.Text.CanvasTextLayout(session, text, textFormat, 100, 100);
-				//session.DrawTextLayout(textLayout, new System.Numerics.Vector2(cx, cy), strokeColor);
-				//textFormat.FontWeight = Windows.UI.Text.FontWeights.Normal;
-				//session.DrawTextLayout(textLayout, new System.Numerics.Vector2(cx, cy), fillColor);
-
-				//session.DrawText(text, new System.Numerics.Vector2(cx, cy), strokeColor, textFormat);
-				textFormat.FontWeight = Windows.UI.Text.FontWeights.Normal;
-				session.DrawText(text, new System.Numerics.Vector2(cx, cy), fillColor, textFormat);
-			}
-		}
-
 		internal static void ApplyTextLayer(CanvasDrawingSession session)
 		{
 			var shadow = new ShadowEffect()
 			{
-				BlurAmount = 0.3f,
+				BlurAmount = 0.01f,
 				ShadowColor = Colors.White,
-				Optimization = EffectOptimization.Balanced
+				Optimization = EffectOptimization.Quality
 			};
 			shadow.Source = renderText;
 			session.DrawImage(shadow);
 		}
 
-		internal static void DrawStreetNames(Tile.Feature feature, float scale, CanvasDrawingSession session, Color fillColor, Color strokeColor, int innerLineWidth, float outerLineWidth, string text)
+		internal static void DrawText(
+			Tile.Feature feature, 
+			float scale, 
+			CanvasDrawingSession session, 
+			Color fillColor, 
+			Color strokeColor, 
+			int innerLineWidth, 
+			float outerLineWidth, 
+			string text, 
+			float fontSize = 5f)
 		{
+			CanvasTextFormat textFormat = new CanvasTextFormat()
+			{
+				FontSize = fontSize,
+				FontWeight = Windows.UI.Text.FontWeights.Normal,
+				HorizontalAlignment = CanvasHorizontalAlignment.Center,
+				VerticalAlignment = CanvasVerticalAlignment.Center
+			};
+
 			Queue<uint> q = new Queue<uint>(feature.Geometries);
 			float cx = 0;
 			float cy = 0;
+
 			if (feature.Type == Tile.GeomType.Linestring)
-			{
-				Microsoft.Graphics.Canvas.Text.CanvasTextFormat textFormat = new Microsoft.Graphics.Canvas.Text.CanvasTextFormat()
-				{
-					FontSize = 5,
-					FontWeight = Windows.UI.Text.FontWeights.Bold,
-					HorizontalAlignment = Microsoft.Graphics.Canvas.Text.CanvasHorizontalAlignment.Center,
-					VerticalAlignment = Microsoft.Graphics.Canvas.Text.CanvasVerticalAlignment.Center
-				};
-				
+			{	
 				q = new Queue<uint>(feature.Geometries);
 				cx = 0;
 				cy = 0;
 
-				List<System.Numerics.Vector2> poly = new List<System.Numerics.Vector2>();
+				List<Vector2> poly = new List<Vector2>();
 
 				while (q.Count > 0)
 				{
@@ -307,14 +289,14 @@ namespace GpsPreview.Maps
 						case GeometryCommand.MoveTo:
 							cx += DecodeParameter(q.Dequeue()) * scale;
 							cy += DecodeParameter(q.Dequeue()) * scale;
-							poly.Add(new System.Numerics.Vector2(cx, cy));
+							poly.Add(new Vector2(cx, cy));
 							break;
 						case GeometryCommand.LineTo:
 							for (int it = 0; it < cmd.count; it++)
 							{
 								cx += DecodeParameter(q.Dequeue()) * scale;
 								cy += DecodeParameter(q.Dequeue()) * scale;
-								poly.Add(new System.Numerics.Vector2(cx, cy));
+								poly.Add(new Vector2(cx, cy));
 							}
 							break;
 					}
@@ -340,14 +322,58 @@ namespace GpsPreview.Maps
 				var a = Math.Atan2((end - start).Y, (end - start).X);
 				if (a > (Math.PI / 2f)) a -= Math.PI;
 
-				var oldTransform = session.Transform;
-				session.Transform = System.Numerics.Matrix3x2.CreateRotation((float)a, mid);
-				textFormat.FontWeight = Windows.UI.Text.FontWeights.Normal;
-				session.DrawText(text, mid, fillColor, textFormat);
-				session.Transform = oldTransform;
+				//var oldTransform = session.Transform;
+				//session.Transform = Matrix3x2.CreateRotation((float)a, mid);
+
+				CanvasTextLayout textLayout = new CanvasTextLayout(session, text, textFormat, 100, 10);
+				CanvasGeometry geometry = CanvasGeometry.CreateText(textLayout);
+				PolyTextRenderer ptr = new PolyTextRenderer(session);
+				ptr.Poly = poly.ToArray();
+				textLayout.DrawToTextRenderer(ptr, mid);
+
+				//session.DrawText(text, mid, fillColor, textFormat);
+				//session.DrawTextLayout(textLayout, mid, fillColor);
+				//session.DrawGeometry(geometry, mid, strokeColor, 0.1f);
+
+				//session.Transform = oldTransform;
 
 				//DrawGeometry(feature, scale, session, Colors.Red, Colors.Red, 1, 1);
 
+			}
+
+			if(feature.Type == Tile.GeomType.Point)
+			{
+				var cmd = DecodeCommand(q.Dequeue());
+				cx += DecodeParameter(q.Dequeue()) * scale;
+				cy += DecodeParameter(q.Dequeue()) * scale;
+
+				var textLayout = new CanvasTextLayout(session, text, textFormat, 100, 10);
+				Vector2 mid = new Vector2(cx, cy);
+				CanvasGeometry geometry = CanvasGeometry.CreateText(textLayout);
+				//session.DrawTextLayout(textLayout, mid, fillColor);
+				//session.FillGeometry(geometry, mid, fillColor);
+				//session.DrawGeometry(geometry, mid, strokeColor, 0.1f);
+				//session.DrawRectangle(new Windows.Foundation.Rect(mid.X + textLayout.DrawBounds.X, mid.Y + textLayout.DrawBounds.Y, textLayout.DrawBounds.Width, textLayout.DrawBounds.Height), Colors.Red, 0.2f);
+				session.DrawText(text, new Vector2(cx, cy), fillColor, textFormat);
+			}
+		}
+
+		internal static void DrawIcon(Tile.Feature f, float scale, CanvasDrawingSession session, CanvasSvgDocument icon, Color black, Color darkGray)
+		{
+			float iconSize = 0.001f;
+			Queue<uint> q = new Queue<uint>(f.Geometries);
+			float cx = 0;
+			float cy = 0;
+			if (f.Type == Tile.GeomType.Point)
+			{
+				var cmd = DecodeCommand(q.Dequeue());
+				cx += DecodeParameter(q.Dequeue()) * scale;
+				cy += DecodeParameter(q.Dequeue()) * scale;
+				var m = session.Transform;
+				session.Transform = Matrix3x2.CreateScale(0.25f, new Vector2(cx, cy)) * Matrix3x2.CreateTranslation(-2,-2);
+				session.DrawSvg(icon, new Windows.Foundation.Size(iconSize, iconSize), cx- iconSize/2f, cy - iconSize/2f);
+				session.Transform = m;
+				//session.DrawCircle(cx, cy, 0.1f, Colors.Red);
 			}
 		}
 	}

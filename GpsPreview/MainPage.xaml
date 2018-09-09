@@ -17,16 +17,24 @@
 			<TextBlock x:Name="textOutput" Padding="10" Height="100" />
 		</StackPanel>
 
-		<StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+		<StackPanel Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="20, 20, 100, 20">
 			<Button x:Name="gpsButton" Click="gpsButton_Click" HorizontalAlignment="Center" Margin="10">GPS</Button>
 			<Button x:Name="updateButton" Click="updateButton_Click" HorizontalAlignment="Center" Margin="10">update</Button>
 			<Button x:Name="sqliteTest" Click="sqliteTest_Click" HorizontalAlignment="Center" Margin="10">SQLite</Button>
 			<Button x:Name="loadTile" Click="loadTile_Click" HorizontalAlignment="Center" Margin="10">Load Manual</Button>
+			<MenuFlyoutSeparator/>
+			<Button x:Name="setStartPoint" Click="setStartPoint_Click" Margin="10">Set Start</Button>
+			<Button x:Name="setEndPoint" Click="setEndPoint_Click" Margin="10">Set End</Button>
+			<Button x:Name="searchRoute" Click="searchRoute_Click" Margin="10">Search Route</Button>
+			<Button x:Name="clearRouter" Click="clearRouter_Click" Margin="10">Clear route</Button>
+
 		</StackPanel>
 
 		<StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,2,0,-2" VerticalAlignment="Stretch">
 			<canvas:CanvasControl x:Name="win2dCanvas" Draw="CanvasControl_Draw" ClearColor="White" Width="768" Height="768" HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.85" />
 		</StackPanel>
 
+		<Slider x:Name="zoomLevelSlider" Minimum="6" Maximum="19" StepFrequency="1" Value="14" Orientation="Vertical" TickPlacement="Outside" TickFrequency="1" Margin="30" Width="40" HorizontalAlignment="Right" />
+		<TextBlock HorizontalAlignment="Right" Margin="40,5" Text="{Binding ElementName=zoomLevelSlider, Path=Value, Mode=OneWay}"/>
 	</Grid>
 </Page>
